@@ -1,139 +1,169 @@
 #!/bin/bash
 
-# Set log level to 1 or 2 less or more detailed log output
 set -e
-readonly log=0
+
+########
+# Constants
+########
 
 readonly NL=$'\n'
 readonly TAB=$'\t'
+
+
+########
+# Parse command line options
+########
+
+function print_usage {
+  echo "usage: treehash [-b|--block <size>] [-a|--alg <alg>] <> [-v|--verbose <level>] <file>"
+  echo ""
+  echo "Calculates the top level hash of a Merkel tree (tree hash) built from equal sized chunks of a file."
+  echo ""
+  echo "    --block    size of the leave data blocks in bytes, defaults to 1M."
+  echo "               can be postfixed with K, M, G, T, P, E, k, m, g, t, p, or e,"
+  echo "               see the '--block' option of the 'parallel' command for details."
+  echo "    --alg      hash algorithm to use, defaults to 'sha256'. Supported"
+  echo "               algorithms are the ones supported by 'openssl dgst'"
+  echo "    --verbose  print diagnostic messages to stderr if level is large then 0"
+}
+
+arg_positional=()
+while [[ $# -gt 0 ]]; do
+  key="$1"
+
+  case $key in
+      -h|--help)
+      print_usage
+      exit 0
+      ;;
+      -b|--block)
+      arg_block="$2"
+      shift # past argument
+      shift # past value
+      ;;
+      -v|--verbose)
+      arg_log="$2"
+      shift # past argument
+      shift # past value
+      ;;
+      -a|--alg)
+      arg_alg="$2"
+      shift # past argument
+      shift # past value
+      ;;
+      *)    # unknown option
+      arg_positional+=("$1") # save it in an array for later
+      shift # past argument
+      ;;
+  esac
+done
+set -- "${arg_positional[@]}" # restore positional parameters
+
+readonly log=${arg_log:-0}
+readonly block_size="${arg_block:-1M}"
+readonly hash_alg="${arg_alg:-sha256}"
+
 
 ##########
 # Utility functions
 ##########
 
-function parse_hex {
-  echo -n "$1" | cut -f 2 -d ' '
-}
-
-function to_hex {
-  echo -n "$1" | cut -f 2 | base64 -D | xxd -p -c 256
-}
-
-function count {
-  echo -n "$1" | wc -l
-}
-
-function combined_sha {
+function combine_hash {
+  # Convert hex format to binary, concat and hash
   cat <(echo -n "$1" | xxd -r -p) <(echo -n "$2" | xxd -r -p) \
-      | openssl dgst -sha256 -binary -hex | cut -f 2 -d ' '
-}
-
-function format {
-  # Make newline characters visible
-  echo -n "${1//$'\n'/~$'\n'}"
-}
-
-########
-# Stack to keep track of intermediate hash values.
-#
-# Entry format: 'node_level\tnode_hash\n'
-# e.g: 'xxx    ab37934694e3c48d5c437c904f1bf83197b5acc9a308410207b8fe89078c6df5'
-########
-
-stack=""
-head=""
-
-function push {
-  push_value="$1"
-  push_level="$2"
-
-  stack="$stack$push_level$TAB$push_value$NL"
-
-  (($log)) && echo "Push: $push_level $push_value" || :
-  (($log > 1)) && echo "Stack size after push: $(count "$stack")" || :
-  (($log > 1)) && echo "Stack after push:$NL$(format "$stack")" || :
-}
-
-function pop {
-  pop_levels=${1:-1}
-
-  # Use -n option to omit trailing newline from echo command
-  # Re-add newline as posix command substitiution $(..) trims trailing newlines
-  head="$(echo -n "$stack" | tail -n -$pop_levels)$NL"
-  stack="$(echo -n "$stack" | tail -r | tail -n +$((pop_levels + 1)) | tail -r)$NL"
-  if [[ ${#stack} -lt 2 ]]; then
-    (($log > 1)) && echo "Clear empty stack" || :
-    stack=""
-  fi
-
-  (($log)) && echo "Pop head ($pop_levels levels):$NL$(format "$head")" || :
-  (($log > 1)) && echo "Stack after pop:$NL$(format "$stack")" || :
-}
-
-function peak {
-  local peak_levels=${1:-1}
-
-  head="$(echo -n "$stack" | tail -n -$peak_levels)$NL"
-
-  (($log)) && echo "Peak head ($peak_levels levels):$NL$(format "$head")" || :
-}
-
-function head_levels_match {
-  if [[ $(count "$head") -gt 2 ]]; then
-    echo "Testing more than two levels is not supported"
-    exit 10
-  fi
-
-  if [[ $(count "$head") -lt 2 ]]; then
-    (($log)) && echo "Distinct head levels: 0" || :
-    return 1
-  fi
-
-  local distinct=$(echo -n "$head" | cut -f 1 | uniq | wc -l)
-
-  (($log)) && echo "Distinct head levels: $distinct" || :
-
-  (( distinct == 1 ))
-}
-
-function combine_head_and_push {
-  if [[ $(count "$head") -ne 2 ]]; then
-    echo "Can combine only exactly two elements"
-    exit 10
-  fi
-
-  local level=$(echo -n "$head" | head -n 1 | cut -f 1)
-  local head_1=$(echo -n "$head" | head -n 1 | cut -f 2)
-  local head_2=$(echo -n "$head" | tail -n 1 | cut -f 2)
-
-  local combined=$(combined_sha "$head_1" "$head_2")
-
-  (($log > 1)) && echo "Combine:$NL$(format $head_1)$NL$(format "$head_2")" || :
-  (($log)) && echo "Combined SHA: $combined" || :
-
-  push "$combined" "x$level"
+      | openssl dgst -"$hash_alg" -hex | cut -f 2 -d ' '
 }
 
 
 ############
-# Calculate tree hash in linear mode
+# Calculate tree hash iterating stdin
 ############
 
-file="$1"
+function calculate_root_hash {
+  local max_depth="$1"
+
+  # Base case: read chunk from stdin and calculate leave hash
+  if (( $max_depth == 0 )); then
+    local hash
+    read hash && hash="${hash##* }"
+    if [[ -z "$hash" ]]; then
+      (($log > 0)) && >&2 echo "Input exhausted" || :
+      exit 0
+    fi
+
+    (($log > 0)) && >&2 echo "Read $hash" || :
+    echo -n "$hash"
+    exit 0
+  fi
+
+  # Recurse to calculate left/right child hashes and combine them
+  local -r left=$(calculate_root_hash $(($max_depth - 1)))
+  if [[ -z "$left" ]]; then
+    (($log > 0)) && >&2 echo "Terminate: no left root"|| :
+    exit 0
+  fi
+  (($log > 0)) && >&2 echo "Left root: $left" || :
+
+  local right=$(calculate_root_hash $(($max_depth - 1)))
+  if [[ -z "$right" ]]; then
+    (($log > 0)) && >&2 echo "Terminate: no right root" || :
+    echo -n "$left"
+    exit 0
+  fi
+  (($log > 0)) && >&2 echo "Right root: $right" || :
+
+  combine_hash "$left" "$right"
+}
+
+function calculate_hash {
+  local left="$1"
+  local level="$2"
+
+  # Initialize
+  if [[ -z "$left" ]]; then
+    local first="$(calculate_root_hash 0)"
+    if [[ -z "$first" ]]; then
+      (($log > 0)) && >&2 echo "No input" || :
+      exit 0
+    fi
+
+    (($log > 0)) && >&2 echo "Initialize with $first" || :
+    calculate_hash "$first" 0
+    exit 0
+  fi
+
+  (($log > 0)) && >&2 echo "Calculate hash at level $level" || :
+
+  # Calculate right child and recurse to calculate the next level
+  local right=$(calculate_root_hash $level)
+  if [[ -z "$right" ]]; then
+    (($log > 0)) && >&2 echo "Terminate: no right child, return left: $left" || :
+    echo -n "$left"
+    exit 0
+  fi
+
+  (($log > 0)) && >&2 echo "Left child ($level): $left" || :
+  (($log > 0)) && >&2 echo "Right child ($level): $right" || :
+
+  combined=$(combine_hash "$left" "$right")
+  (($log > 0)) && >&2 echo "Combined hash ($level): $right" || :
+
+  calculate_hash $combined $(($level + 1))
+}
 
 
-while read hash; do
-  push $(parse_hex "$hash") "x"
-  while peak 2 && head_levels_match; do
-    pop 2 && combine_head_and_push
-  done
-done < <(cat $file | parallel --no-notice --pipe --block 1M --recend '' -j 1 -k \
-    'openssl dgst -sha256 -binary -hex')
+########
+# Split stdin into chunks and feed into the hash algorithm
+########
 
-# Reduce remaining stack if the tree is not symetric
-while [[ $(count "$stack") -ge 2 ]]; do
-  (($log)) && echo "Reduce stack: $(count "$stack")" || :
-  pop 2 && combine_head_and_push
-done
+input_file="$1"
 
-echo ${stack##*$'\t'}
+(($log > 0)) && >&2 echo "Calculate hash for $input_file" || :
+
+cat $input_file \
+  | parallel --no-notice --pipe --block $block_size --recend '' -k \
+      "openssl dgst -$hash_alg -hex" \
+  | calculate_hash "" 0
+
+# Terminate with newline
+echo ""
