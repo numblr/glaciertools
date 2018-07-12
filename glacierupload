@@ -1,0 +1,3 @@
+#!/bin/bash
+
+./multipart_upload.sh "$@" || ./closeuploads.sh "$1" "$2"
