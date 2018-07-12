@@ -7,10 +7,13 @@ readonly log=0
 readonly NL=$'\n'
 readonly TAB=$'\t'
 
-
 ##########
 # Utility functions
 ##########
+
+function parse_hex {
+  echo -n "$1" | cut -f 2 -d ' '
+}
 
 function to_hex {
   echo -n "$1" | cut -f 2 | base64 -D | xxd -p -c 256
@@ -20,20 +23,15 @@ function count {
   echo -n "$1" | wc -l
 }
 
-function digest_file {
-  echo "$(openssl dgst -sha256 -binary "$1" | base64)"
-}
-
 function combined_sha {
-  cat <(echo -n "$1" | base64 -D) <(echo -n "$2" | base64 -D) \
-      | openssl dgst -sha256 -binary | base64
+  cat <(echo -n "$1" | xxd -r -p) <(echo -n "$2" | xxd -r -p) \
+      | openssl dgst -sha256 -binary -hex | cut -f 2 -d ' '
 }
 
 function format {
   # Make newline characters visible
   echo -n "${1//$'\n'/~$'\n'}"
 }
-
 
 ########
 # Stack to keep track of intermediate hash values.
@@ -118,16 +116,19 @@ function combine_head_and_push {
 
 
 ############
-# Calculate tree hash
+# Calculate tree hash in linear mode
 ############
 
-for f in "$@"; do
-  (($log)) && echo "Process $f" || :
-  push "$(digest_file "$f")" "x"
+file="$1"
+
+
+while read hash; do
+  push $(parse_hex "$hash") "x"
   while peak 2 && head_levels_match; do
     pop 2 && combine_head_and_push
   done
-done
+done < <(cat $file | parallel --no-notice --pipe --block 1M --recend '' -j 1 -k \
+    'openssl dgst -sha256 -binary -hex')
 
 # Reduce remaining stack if the tree is not symetric
 while [[ $(count "$stack") -ge 2 ]]; do
@@ -135,4 +136,4 @@ while [[ $(count "$stack") -ge 2 ]]; do
   pop 2 && combine_head_and_push
 done
 
-echo $(to_hex "$stack")
+echo ${stack##*$'\t'}

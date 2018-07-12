@@ -17,8 +17,8 @@ readonly vault="$2"
 readonly archive="$(realpath "$3")"
 readonly description="${4:-}"
 
-# File size required for tree hash
-readonly part_size=1048576
+# Only powers of 2 are allowed, max is 2**22
+readonly part_size=$((1048576 * 2**1))
 readonly tmp_dir="glacier_upload"
 readonly prefix="glacier_upload_part_"
 readonly load="100%"
@@ -71,7 +71,7 @@ for f in $prefix*; do
 --upload-id $uploadId"
 
 done \
-  | cat <(echo "../treehash.sh $prefix* > ${prefix}treehash.sha") <(cat -) \
+  | cat <(echo "../treehash $archive > ${prefix}treehash.sha") <(cat -) \
   | parallel --load $load --no-notice --bar
 
 
