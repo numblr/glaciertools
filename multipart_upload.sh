@@ -18,7 +18,7 @@ readonly archive="$(realpath "$3")"
 readonly description="${4:-}"
 
 # Only powers of 2 are allowed, max is 2**22
-readonly part_size=$((1048576 * 2**1))
+readonly part_size=$((1048576 * 2**5))
 readonly tmp_dir="glacier_upload"
 readonly prefix="glacier_upload_part_"
 readonly load="100%"
