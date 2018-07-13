@@ -15,7 +15,7 @@ readonly TAB=$'\t'
 ########
 
 function print_usage {
-  echo "usage: treehash [-b|--block <size>] [-a|--alg <alg>] <> [-v|--verbose <level>] <file>"
+  echo "usage: treehash [-b|--block <size>] [-a|--alg <alg>] [-v|--verbose <level>] <file>"
   echo ""
   echo "Calculates the top level hash of a Merkel tree (tree hash) built from equal sized chunks of a file."
   echo ""
