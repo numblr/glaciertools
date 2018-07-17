@@ -1,3 +1,96 @@
 #!/bin/bash
 
-./multipart_upload.sh "$@" || ./closeuploads.sh "$1" "$2"
+set -e
+# Debug
+# set -x
+
+readonly SCRIPT="$(realpath "$0" | xargs dirname)"
+echo $SCRIPT
+
+########
+# Parse command line options
+########
+
+function print_usage {
+  echo "usage: glacierupload -v|--vault <vault> [-p|--profile <profile>]"
+  echo "        [-d|--description <description>] [-s|--split-size <level>] <file>"
+  echo ""
+  echo "Upload a file to a vault in AWS glacier."
+  echo ""
+  echo "    --vault        name of the vault to which the file should be uploaded"
+  echo "    --profile      optional profile name to use for the upload. The profile"
+  echo "                   name must be configured with the aws cli client."
+  echo "    --description  optinal description of the file"
+  echo "    --split-size   level that determines the size of the parts used for"
+  echo "                   uploading the file. The level can be a number between"
+  echo "                   0 and 22 and results in part size of (2^level) MBytes."
+  echo "                   If not specified the default is 0, i.e. the file is"
+  echo "                   uploaded in 1MByte parts."
+  echo "    --help         print this message"
+}
+
+arg_positional=()
+while [[ $# -gt 0 ]]; do
+  key="$1"
+
+  case $key in
+      -h|--help)
+      print_usage
+      exit 0
+      ;;
+      -s|--split-size)
+      arg_split="$2"
+      shift # past argument
+      shift # past value
+      ;;
+      -p|--profile)
+      arg_profile="$2"
+      shift # past argument
+      shift # past value
+      ;;
+      -d|--description)
+      arg_description="$2"
+      shift # past argument
+      shift # past value
+      ;;
+      -v|--vault)
+      arg_vault="$2"
+      shift # past argument
+      shift # past value
+      ;;
+      *)    # unknown option
+      arg_positional+=("$1") # save it in an array for later
+      shift # past argument
+      ;;
+  esac
+done
+set -- "${arg_positional[@]}" # restore positional parameters
+
+if [ -z "$arg_vault" ]; then
+  echo "No vault specified!"
+  print_usage
+  exit 1
+fi
+if [ -z "$1" ]; then
+  echo "No file specified!"
+  print_usage
+  exit 1
+fi
+
+readonly profile="${arg_profile:-}"
+readonly vault="${arg_vault:-}"
+readonly archive="$(realpath "$1")"
+readonly description="${arg_description:-}"
+readonly split_size=${arg_split:-0}
+
+upload_args=("$vault")
+upload_args+=("$archive")
+upload_args+=("$split_size")
+upload_args+=("$description")
+upload_args+=("$profile")
+
+closeupload_args=("$vault")
+closeupload_args+=("$profile")
+
+
+"$SCRIPT"/multipart_upload.sh "${upload_args[@]}" || "$SCRIPT"/closeuploads.sh "${closeupload_args[@]}"

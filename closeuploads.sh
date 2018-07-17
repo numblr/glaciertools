@@ -1,14 +1,16 @@
 #!/bin/bash
 
 set -e
+# Debug
+# set -x
 
-if [ "$#" -lt 2 ]; then
-    echo "Illegal number of parameters"
+if [ "$#" -lt 1 ]; then
+    echo "No vault specified"
     exit 1
 fi
 
-readonly profile="$1"
-readonly vault="$2"
+readonly vault="$1"
+readonly profile="${2:-}"
 
 echo ""
 echo "Closing active Connections"
@@ -29,18 +31,33 @@ echo "Closing active Connections"
 #         }
 #     ]
 # }
-aws --profile "$profile" glacier list-multipart-uploads \
-    --account-id - \
-    --vault-name "$vault" \
+list_args=()
+if [[ -n "$profile" ]]; then
+  list_args+=('--profile')
+  list_args+=("$profile")
+fi
+list_args+=('glacier' 'list-multipart-uploads')
+list_args+=('--account-id' '-')
+list_args+=('--vault-name')
+list_args+=("$vault")
+
+abort_args=()
+if [[ -n "$profile" ]]; then
+  abort_args+=('--profile')
+  abort_args+=("$profile")
+fi
+abort_args+=('glacier' 'abort-multipart-upload')
+abort_args+=('--account-id' '-')
+abort_args+=('--vault-name')
+abort_args+=("$vault")
+abort_args+=('--upload-id')
+
+aws "${list_args[@]}" \
   | jq '.UploadsList | .['$i'] | .MultipartUploadId' \
-  | xargs -t -P4 -L1 aws --profile "$profile" glacier abort-multipart-upload \
-      --account-id - \
-      --vault-name "$vault" \
-      --upload-id
+  | tr '\n' '\0' \
+  | xargs -0 -t -P4 -L1 aws "${abort_args[@]}"
 
 echo ""
 echo "Remaining Active Connections:"
 
-aws --profile "$profile" glacier list-multipart-uploads \
-    --account-id - \
-    --vault-name "$vault" \
+aws "${list_args[@]}"

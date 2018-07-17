@@ -6,47 +6,47 @@
 # sudo pip install awscli
 
 set -e
+# Debug
+# set -x
 
 ############
 # Constants
 ############
 
-#
-MB=1048576 && export MB
+# Script location
+readonly SCRIPT="$(realpath "$0" | xargs dirname)"
+# Number of parallel uploads
+readonly JOBS="100%"
 
+readonly MB=1048576
+# Max line size for xxd is 256
+readonly LINE_SIZE=256
 
 ##########
 # Utility functions: Binary data handling
 # Convert binary data to lines of 256-byte hex strings
 ##########
 
-# Max line size for xxd is 256
-line_size=256 && export line_size
 
 function to_hex {
-  xxd -p -c "$line_size" | set_line_number
+  xxd -p -c "$LINE_SIZE" | set_line_number
 }
-export -f to_hex
 
 function to_binary {
   get_data | xxd -p -r
 }
-export -f to_binary
 
 function get_line_number {
   cut -f 1
 }
-export -f get_line_number
 
 function get_data {
   cut -f 2
 }
-export -f get_data
 
 function set_line_number {
   cat -n
 }
-export -f set_line_number
 
 function byte_range {
   hex_data="$1"
@@ -55,36 +55,33 @@ function byte_range {
   first_line=${line_numbers%% *}
   last_line=${line_numbers##* }
 
-  start=$(( (first_line-1)*line_size ))
-  end=$(( last_line*line_size-1 ))
+  start=$(( (first_line-1)*LINE_SIZE ))
+  end=$(( last_line*LINE_SIZE-1 ))
 
   # Handle last chunk
   end=$(( end > (file_size-1) ? (file_size-1) : end ))
 
   echo -n "$start-$end"
 }
-export -f byte_range
-
 
 #############
 # Initialize parameters and variables
 #############
 
-if [ "$#" -lt 3 ]; then
+if [ "$#" -lt 2 ]; then
     echo "Illegal number of parameters"
     exit 1
 fi
 
-readonly profile="$1" && export profile
-readonly vault="$2" && export vault
-readonly archive="$(realpath "$3")" && export archive
-readonly description="${4:-}" && export description
-readonly part_level=0 && export part_level
+readonly vault="$1"
+readonly archive="$(realpath "$2")"
+readonly split_size=${3:-0}
+readonly description="${4:-}"
+readonly profile="${5:-}"
 
 # Only powers of 2 are allowed, max is 2**22
-readonly part_size=$(( 2**part_level * MB)) && export part_size
-
-readonly file_size=$(stat -f "%z" $archive) && export file_size
+readonly part_size=$(( 2**split_size * MB))
+readonly file_size=$(stat -f "%z" $archive)
 
 echo ""
 echo "---------------------------------------"
@@ -93,31 +90,31 @@ echo "Total upload (bytes): $file_size"
 echo "---------------------------------------"
 echo ""
 
-
 # initiate multipart upload connection to glacier
-echo "aws --profile "$profile" \
-    glacier initiate-multipart-upload \
-    --account-id - \
-    --part-size "$part_size" \
-    --vault-name "$vault" \
-    --archive-description "'$description'""
+init_args=()
+if [[ -n "$profile" ]]; then
+  init_args+=('--profile')
+  init_args+=("$profile")
+fi
+init_args+=('glacier' 'initiate-multipart-upload')
+init_args+=('--account-id' '-')
+init_args+=('--part-size' "$part_size")
+init_args+=('--vault-name')
+init_args+=("$vault")
+init_args+=('--archive-description')
+init_args+=("$description")
 
-readonly init=$(aws --profile "$profile" \
-    glacier initiate-multipart-upload \
-    --account-id - \
-    --part-size "$part_size" \
-    --vault-name "$vault" \
-    --archive-description "'$description'")
+readonly init="$(aws "${init_args[@]}")"
 
 # xargs trims off the quotes
-readonly uploadId=$(echo $init | jq '.uploadId' | xargs) && export uploadId
+readonly upload_id=$(echo "$init" | jq '.uploadId' | xargs)
 
 
 #########
 # Upload parts
 #########
 
-echo "Start upload $uploadId"
+echo "Start upload $upload_id"
 echo ""
 
 
@@ -125,29 +122,75 @@ function upload_part {
   hex_data="$(cat)"
   range=$(byte_range "$hex_data")
 
+  echo "Uploading range $range ($(( ${range##*-}/part_size ))/$(( file_size/part_size )))"
+
   # Write part data to tmp file
   part="$(echo -n "$range" | tr '-' '_').part"
   echo -n "$hex_data" | to_binary > "$part"
 
-  aws --profile "$profile" glacier upload-multipart-part \
-    --body "$part" \
-    --range "bytes $range/*" \
-    --account-id - \
-    --vault-name "$vault" \
-    --upload-id "$uploadId"
+  upload_args=()
+  if [[ -n "$profile" ]]; then
+    upload_args+=('--profile')
+    upload_args+=("$profile")
+  fi
+  upload_args+=('glacier' 'upload-multipart-part')
+  upload_args+=('--account-id' '-')
+  upload_args+=('--body' "$part")
+  upload_args+=('--range')
+  upload_args+=("bytes $range/*")
+  upload_args+=('--vault-name')
+  upload_args+=("$vault")
+  upload_args+=('--upload-id' "$upload_id")
+
+  aws "${upload_args[@]}"
+
+  echo "Finished upload of range $range"
 
   # Remove tmp file
   rm "$part"
 }
-export -f upload_part
 
+
+# Create parts in a temporary directory
+tmp_dir="$(mktemp -d)"
+cd "$tmp_dir"
+echo "From $tmp_dir"
 
 # Number of lines of hex data per part
-records=$(($part_size/$line_size)) && export records
+records=$(($part_size/LINE_SIZE))
+
+# parallel runs in a subprocess
+export -f to_binary
+export -f to_hex
+export -f get_line_number
+export -f get_data
+export -f set_line_number
+export -f byte_range
+export -f upload_part
+
+export SCRIPT
+export JOBS
+export MB
+export LINE_SIZE
+export records
+export upload_id
+export file_size
+export part_size
+export profile
+export description
+export split_size
+export archive
+export vault
 
 parallel --no-notice ::: \
-  'cat $archive | to_hex | parallel --no-notice --pipe -N$records upload_part' \
-  './treehash $archive > treehash.sha'
+  'cat $archive | to_hex | parallel --no-notice --pipe -N$records upload_part -j $JOBS' \
+  '"$SCRIPT"/treehash "$archive" > treehash.sha'
+
+readonly treehash="$(< treehash.sha)"
+
+# Return to original directory
+cd -
+rm -rf "$tmp_dir"
 
 
 #########
@@ -155,16 +198,25 @@ parallel --no-notice ::: \
 #########
 
 echo ""
-echo "Complete upload $uploadId :"
+echo "Complete upload $upload_id :"
 echo ""
 
 
-readonly treehash="$(cat "treehash.sha")"
-readonly result=$(aws glacier --profile "$profile" complete-multipart-upload \
-    --checksum "$treehash" \
-    --archive-size "$file_size" \
-    --upload-id "$uploadId" \
-    --account-id - \
-    --vault-name "$vault")
+complete_args=()
+if [[ -n "$profile" ]]; then
+  complete_args+=('--profile')
+  complete_args+=("$profile")
+fi
+complete_args+=('glacier' 'complete-multipart-upload')
+complete_args+=('--account-id' '-')
+complete_args+=('--checksum' "$treehash")
+complete_args+=('--archive-size' "$file_size")
+complete_args+=('--vault-name')
+complete_args+=("$vault")
+complete_args+=('--upload-id' "$upload_id")
 
-echo $result | jq '.'
+readonly result=$(aws "${complete_args[@]}")
+
+echo "$result" | jq '.'
+readonly archive_id="$(echo "$result" | jq '.archiveId' | xargs)"
+echo "$result" > "$(basename "$archive").${archive_id:0:8}.upload.json"
