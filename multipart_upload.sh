@@ -182,8 +182,8 @@ export split_size
 export archive
 export vault
 
-parallel --no-notice ::: \
-  'cat $archive | to_hex | parallel --no-notice --pipe -N$records upload_part -j $JOBS' \
+parallel --no-notice --line-buffer ::: \
+  'cat $archive | to_hex | parallel --no-notice --pipe -N$records upload_part -j $JOBS --line-buffer' \
   '"$SCRIPT"/treehash "$archive" > treehash.sha'
 
 readonly treehash="$(< treehash.sha)"

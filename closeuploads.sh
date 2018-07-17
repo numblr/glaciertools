@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+# set -e
 # Debug
 # set -x
 
@@ -54,8 +54,7 @@ abort_args+=('--upload-id')
 
 aws "${list_args[@]}" \
   | jq '.UploadsList | .['$i'] | .MultipartUploadId' \
-  | tr '\n' '\0' \
-  | xargs -0 -t -P4 -L1 aws "${abort_args[@]}"
+  | xargs -t -P4 -L1 aws "${abort_args[@]}"
 
 echo ""
 echo "Remaining Active Connections:"
