@@ -3,10 +3,12 @@
 ## glacierupload
 **Prerequisites**
 
-This script depends on <b>jq</b> and <b>parallel</b>.  If you are using Homebrew, then run the following:
+This script depends on <b>jq</b>, <b>openssl</b> and <b>parallel</b>. If you are
+using Homebrew, then run the following:
 
     brew install jq
     brew install parallel
+    brew install openssl
 
 It assumes you have an AWS account, and have signed up for the glacier service
 and have created a vault already.
@@ -17,8 +19,8 @@ installed on your machine, e.g. by:
 
     pip install awscli
 
-The script also assumes that you have a profile with the necessary credentials
-created with the command line client:
+The script requires also that the aws cli is configured with your AWS credentials.
+It supports profiles setup in the aws cli by
 
     aws --profile myprofile configure
 
@@ -29,13 +31,27 @@ You can verify that your connection works by describing the vault you have creat
 
 **Script Usage**
 
-    glacierupload <myprofile> <myvault> <myarchive> [mydescription]
+    glacierupload -v|--vault <vault> [-p|--profile <profile>] [-d|--description <description>] [-s|--split-size <level>] <file>
+    
+    --vault        name of the vault to which the file should be uploaded  
+    --profile      optional profile name to use for the upload. The profil
+                   name must be configured with the aws cli client.
+    --description  optinal description of the file
+    --split-size   level that determines the size of the parts used for
+                   uploading the file. The level can be a number between
+                   0 and 22 and results in part size of (2^level) MBytes.
+                   If not specified the default is 0, i.e. the file is
+                   uploaded in 1MByte parts.
+    --help         print this message
 
-The script currently still splits <i>myarchice</i> into many parts on disk before
-the upload, i.e. it requires to have sufficient disk space available and needs
-write access to the directory. The part size is currently also hard coded in the
-<i>multipart-upload.sh</i> script, but can increased there with the restriction
-that the part size must be a power of 2 (in Megabytes) and less than 4G.
+The script prints the information about the upload to the command line and
+additionally stores it in a file in the directory were the script is executed.
+The file name equals the original file name postfixed with the first 8 characters
+of the archive id and '.upload.json'.
+
+The script splits the file to upload on the fly and stores parts that are currently
+uploaded temporarily on disk, i.e. the amount of free disk space low. The size of
+the individual chunks can be controlled by the --split-size option.
 
 ## treehash
 
