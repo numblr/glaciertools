@@ -19,8 +19,8 @@ installed on your machine, e.g. by:
 
     pip install awscli
 
-The script requires also that the aws cli is configured with your AWS credentials.
-It supports profiles setup in the aws cli by
+The script requires also that the aws cli is configured with your AWS credentials. Optionally
+with the --profile option it supports profiles setup in the aws cli by
 
     aws --profile myprofile configure
 
@@ -49,9 +49,10 @@ additionally stores it in a file in the directory were the script is executed.
 The file name equals the original file name postfixed with the first 8 characters
 of the archive id and '.upload.json'.
 
-The script splits the file to upload on the fly and stores parts that are currently
-uploaded temporarily on disk, i.e. the amount of free disk space low. The size of
-the individual chunks can be controlled by the --split-size option.
+The script splits the file to upload on the fly and only stores parts that are
+currently uploaded temporarily on disk, i.e. the amount of required free disk
+space is low. The size of the individual chunks can be controlled by the --split-size
+option.
 
 ## treehash
 
