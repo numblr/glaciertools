@@ -31,18 +31,18 @@ You can verify that your connection works by describing the vault you have creat
 
 **Script Usage**
 
-    glacierupload -v|--vault <vault> [-p|--profile <profile>] [-d|--description <description>] [-s|--split-size <level>] <file>
+    glacierupload [-p|--profile <profile>] [-d|--description <description>] [-s|--split-size <level>] <-v|--vault vault> <file>
     
-    --vault        name of the vault to which the file should be uploaded  
-    --profile      optional profile name to use for the upload. The profil
-                   name must be configured with the aws cli client.
-    --description  optinal description of the file
-    --split-size   level that determines the size of the parts used for
-                   uploading the file. The level can be a number between
-                   0 and 22 and results in part size of (2^level) MBytes.
-                   If not specified the default is 0, i.e. the file is
-                   uploaded in 1MByte parts.
-    --help         print this message
+    -v --vault        name of the vault to which the file should be uploaded  
+    -p --profile      optional profile name to use for the upload. The profil
+                      name must be configured with the aws cli client.
+    -d --description  optinal description of the file
+    -s --split-size   level that determines the size of the parts used for
+                      uploading the file. The level can be a number between
+                      0 and 22 and results in part size of (2^level) MBytes.
+                      If not specified the default is 0, i.e. the file is
+                      uploaded in 1MByte parts.
+    -h --help         print help message
 
 The script prints the information about the upload to the command line and
 additionally stores it in a file in the directory were the script is executed.
@@ -72,12 +72,13 @@ Homebrew, then run the following:
     treehash [-b|--block <size>] [-a|--alg <alg>] [-v|--verbose <level>] <file>
 
 
-    --block    size of the leave data blocks in bytes, defaults to 1M.
-               can be postfixed with K, M, G, T, P, E, k, m, g, t, p, or e,
-               see the '--block' option of the 'parallel' command for details.
-    --alg      hash algorithm to use, defaults to 'sha256'. Supported
-               algorithms are the ones supported by 'openssl dgst'
-    --verbose  print diagnostic messages to stderr if level is large then 0
+    -b --block    size of the leave data blocks in bytes, defaults to 1M.
+                  can be postfixed with K, M, G, T, P, E, k, m, g, t, p, or e,
+                  see the '--block' option of the 'parallel' command for details.
+    -a --alg      hash algorithm to use, defaults to 'sha256'. Supported
+                  algorithms are the ones supported by 'openssl dgst'
+    -v --verbose  print diagnostic messages to stderr if level is large then 0
+    -h --help     print help message
 
 The script calculates the hash purely from the provided file and does not create
 any temporary files nor does it require that the chunks of the file are present
