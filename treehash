@@ -80,75 +80,78 @@ function combine_hash {
 ############
 
 function calculate_root_hash {
-  local max_depth="$1"
+  local left right max_depth
+  max_depth="$1"
 
   # Base case: read chunk from stdin and calculate leave hash
-  if (( $max_depth == 0 )); then
+  if (( max_depth == 0 )); then
     local hash
-    read hash && hash="${hash##* }"
+    read -r hash && hash="${hash##* }"
     if [[ -z "$hash" ]]; then
-      (($log > 0)) && >&2 echo "Input exhausted" || :
+      ((log > 0)) && >&2 echo "Input exhausted" || :
       exit 0
     fi
 
-    (($log > 0)) && >&2 echo "Read $hash" || :
+    ((log > 0)) && >&2 echo "Read $hash" || :
     echo -n "$hash"
     exit 0
   fi
 
   # Recurse to calculate left/right child hashes and combine them
-  local -r left=$(calculate_root_hash $(($max_depth - 1)))
+  left=$(calculate_root_hash $((max_depth - 1)))
   if [[ -z "$left" ]]; then
-    (($log > 0)) && >&2 echo "Terminate: no left root"|| :
+    ((log > 0)) && >&2 echo "Terminate: no left root"|| :
     exit 0
   fi
-  (($log > 0)) && >&2 echo "Left root: $left" || :
+  ((log > 0)) && >&2 echo "Left root: $left" || :
 
-  local right=$(calculate_root_hash $(($max_depth - 1)))
+  right=$(calculate_root_hash $((max_depth - 1)))
   if [[ -z "$right" ]]; then
-    (($log > 0)) && >&2 echo "Terminate: no right root" || :
+    ((log > 0)) && >&2 echo "Terminate: no right root" || :
     echo -n "$left"
     exit 0
   fi
-  (($log > 0)) && >&2 echo "Right root: $right" || :
+  ((log > 0)) && >&2 echo "Right root: $right" || :
 
   combine_hash "$left" "$right"
 }
 
 function calculate_hash {
-  local left="$1"
-  local level="$2"
+  local left right level
+  left="$1"
+  level="$2"
 
   # Initialize
   if [[ -z "$left" ]]; then
-    local first="$(calculate_root_hash 0)"
+    local first
+    first="$(calculate_root_hash 0)"
     if [[ -z "$first" ]]; then
-      (($log > 0)) && >&2 echo "No input" || :
+      ((log > 0)) && >&2 echo "No input" || :
       exit 0
     fi
 
-    (($log > 0)) && >&2 echo "Initialize with $first" || :
+    ((log > 0)) && >&2 echo "Initialize with $first" || :
     calculate_hash "$first" 0
     exit 0
   fi
 
-  (($log > 0)) && >&2 echo "Calculate hash at level $level" || :
+  ((log > 0)) && >&2 echo "Calculate hash at level $level" || :
 
   # Calculate right child and recurse to calculate the next level
-  local right=$(calculate_root_hash $level)
+  right=$(calculate_root_hash $level)
   if [[ -z "$right" ]]; then
-    (($log > 0)) && >&2 echo "Terminate: no right child, return left: $left" || :
+    ((log > 0)) && >&2 echo "Terminate: no right child, return left: $left" || :
     echo -n "$left"
     exit 0
   fi
 
-  (($log > 0)) && >&2 echo "Left child ($level): $left" || :
-  (($log > 0)) && >&2 echo "Right child ($level): $right" || :
+  ((log > 0)) && >&2 echo "Left child ($level): $left" || :
+  ((log > 0)) && >&2 echo "Right child ($level): $right" || :
 
   combined=$(combine_hash "$left" "$right")
-  (($log > 0)) && >&2 echo "Combined hash ($level): $right" || :
+  ((log > 0)) && >&2 echo "Combined hash ($level): $right" || :
 
-  calculate_hash $combined $(($level + 1))
+  calculate_hash "$combined" $((level + 1))
 }
 
 
@@ -158,10 +161,10 @@ function calculate_hash {
 
 input_file="$1"
 
-(($log > 0)) && >&2 echo "Calculate hash for $input_file" || :
+((log > 0)) && >&2 echo "Calculate hash for $input_file" || :
 
-cat $input_file \
-  | parallel --no-notice --pipe --block $block_size --recend '' -k \
+cat "$input_file" \
+  | parallel --no-notice --pipe --block "$block_size" --recend '' -k \
       "openssl dgst -$hash_alg -hex" \
   | calculate_hash "" 0
 
