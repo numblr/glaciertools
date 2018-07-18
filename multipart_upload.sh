@@ -14,7 +14,7 @@ set -e
 ############
 
 # Script location
-readonly SCRIPT="$(realpath "$0" | xargs dirname)"
+readonly SCRIPT="$(cd $(dirname "$0"); pwd)"
 # Number of parallel uploads
 readonly JOBS="100%"
 
@@ -74,7 +74,7 @@ if [ "$#" -lt 2 ]; then
 fi
 
 readonly vault="$1"
-readonly archive="$(realpath "$2")"
+readonly archive="$(cd $(dirname "$2"); pwd)/$(basename "$2")"
 readonly split_size=${3:-0}
 readonly description="${4:-}"
 readonly profile="${5:-}"

@@ -4,8 +4,12 @@ set -e
 # Debug
 # set -x
 
-readonly SCRIPT="$(realpath "$0" | xargs dirname)"
-echo $SCRIPT
+############
+# Constants
+############
+
+# Script location
+readonly SCRIPT="$(cd $(dirname "$0"); pwd)"
 
 ########
 # Parse command line options
@@ -78,8 +82,8 @@ if [ -z "$1" ]; then
 fi
 
 readonly profile="${arg_profile:-}"
-readonly vault="${arg_vault:-}"
-readonly archive="$(realpath "$1")"
+readonly vault="$arg_vault"
+readonly archive="$1"
 readonly description="${arg_description:-}"
 readonly split_size=${arg_split:-0}
 
