@@ -14,7 +14,7 @@ set -e
 ############
 
 # Script location
-readonly SCRIPT="$(cd $(dirname "$0"); pwd)"
+readonly SCRIPT="$(cd "$(dirname "$0")"; pwd)"
 # Number of parallel uploads
 readonly JOBS="100%"
 
@@ -74,14 +74,14 @@ if [ "$#" -lt 2 ]; then
 fi
 
 readonly vault="$1"
-readonly archive="$(cd $(dirname "$2"); pwd)/$(basename "$2")"
+readonly archive="$(cd "$(dirname "$2")"; pwd)/$(basename "$2")"
 readonly split_size=${3:-0}
 readonly description="${4:-}"
 readonly profile="${5:-}"
 
 # Only powers of 2 are allowed, max is 2**22
 readonly part_size=$(( 2**split_size * MB))
-readonly file_size=$(stat -f "%z" $archive)
+readonly file_size=$(stat -f "%z" "$archive")
 
 echo ""
 echo "---------------------------------------"
@@ -115,7 +115,6 @@ readonly upload_id=$(echo "$init" | jq '.uploadId' | xargs)
 #########
 
 echo "Start upload $upload_id"
-echo ""
 
 
 function upload_part {
@@ -153,42 +152,30 @@ function upload_part {
 
 # Create parts in a temporary directory
 tmp_dir="$(mktemp -d)"
-cd "$tmp_dir"
-echo "From $tmp_dir"
+cd "$tmp_dir" || exit 1
+echo "From temporary directory: $tmp_dir"
+echo ""
 
 # Number of lines of hex data per part
-records=$(($part_size/LINE_SIZE))
+records=$((part_size/LINE_SIZE))
 
 # parallel runs in a subprocess
-export -f to_binary
-export -f to_hex
-export -f get_line_number
-export -f get_data
-export -f set_line_number
-export -f byte_range
+export -f to_binary to_hex get_line_number get_data set_line_number byte_range
 export -f upload_part
 
-export SCRIPT
-export JOBS
-export MB
-export LINE_SIZE
-export records
+export SCRIPT JOBS MB LINE_SIZE
 export upload_id
-export file_size
-export part_size
-export profile
-export description
-export split_size
-export archive
-export vault
+export records file_size part_size split_size
+export profile description archive vault
 
 parallel --no-notice --line-buffer ::: \
-  'cat $archive | to_hex | parallel --no-notice --pipe -N$records upload_part -j $JOBS --line-buffer' \
+  'cat "$archive" | to_hex | parallel --no-notice --pipe -N$records upload_part -j $JOBS --line-buffer' \
   '"$SCRIPT"/treehash "$archive" > treehash.sha'
 
 readonly treehash="$(< treehash.sha)"
 
 # Return to original directory
+echo -n "Returning to "
 cd -
 rm -rf "$tmp_dir"
 

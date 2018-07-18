@@ -9,7 +9,7 @@ set -e
 ############
 
 # Script location
-readonly SCRIPT="$(cd $(dirname "$0"); pwd)"
+readonly SCRIPT="$(cd "$(dirname "$0")"; pwd)"
 
 ########
 # Parse command line options
