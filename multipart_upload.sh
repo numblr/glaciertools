@@ -81,7 +81,7 @@ readonly profile="${5:-}"
 
 # Only powers of 2 are allowed, max is 2**22
 readonly part_size=$(( 2**split_size * MB))
-readonly file_size=$(stat -f "%z" "$archive")
+readonly file_size=$(wc -c < "$archive")
 
 echo ""
 echo "---------------------------------------"

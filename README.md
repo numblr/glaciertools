@@ -1,17 +1,18 @@
-# Bash scripts for Max OS X to upload large files to AWS Glacier
+# Command line tools (Bash scripts) to upload large files to AWS Glacier
 
 ## glacierupload
+
 **Prerequisites**
 
 This script depends on <b>jq</b>, <b>openssl</b> and <b>parallel</b>. If you are
-using Homebrew, then run the following:
+on Mac OS X and using Homebrew, then run the following:
 
     brew install jq
     brew install parallel
     brew install openssl
 
-It assumes you have an AWS account, and have signed up for the glacier service
-and have created a vault already.
+The script assumes you have an AWS account, and have signed up for the glacier
+service and have created a vault already.
 
 It also assumes that you have the
 <a href="http://docs.aws.amazon.com/cli/latest/userguide/installing.html">AWS Command Line Interface</a>
@@ -19,8 +20,8 @@ installed on your machine, e.g. by:
 
     pip install awscli
 
-The script requires also that the aws cli is configured with your AWS credentials. Optionally
-with the --profile option it supports profiles setup in the aws cli by
+The script requires also that the aws cli is configured with your AWS credentials.
+Optionally it supports profiles setup in the aws cli by
 
     aws --profile myprofile configure
 
@@ -31,8 +32,9 @@ You can verify that your connection works by describing the vault you have creat
 
 **Script Usage**
 
-    glacierupload [-p|--profile <profile>] [-d|--description <description>] [-s|--split-size <level>] <-v|--vault vault> <file>
-    
+    glacierupload [-p|--profile <profile>] [-d|--description <description>] [-s|--split-size <level>]
+                   <-v|--vault vault> <file>
+
     -v --vault        name of the vault to which the file should be uploaded  
     -p --profile      optional profile name to use for the upload. The profil
                       name must be configured with the aws cli client.
@@ -44,7 +46,7 @@ You can verify that your connection works by describing the vault you have creat
                       uploaded in 1MByte parts.
     -h --help         print help message
 
-The script prints the information about the upload to the command line and
+The script prints the information about the upload to the shell and
 additionally stores it in a file in the directory were the script is executed.
 The file name equals the original file name postfixed with the first 8 characters
 of the archive id and '.upload.json'.
@@ -52,7 +54,8 @@ of the archive id and '.upload.json'.
 The script splits the file to upload on the fly and only stores parts that are
 currently uploaded temporarily on disk, i.e. the amount of required free disk
 space is low. The size of the individual chunks can be controlled by the --split-size
-option.
+option. The number of parallel uploads is determined by parallel based on the
+number of available CPUs.
 
 ## treehash
 
@@ -61,11 +64,14 @@ equal sized chunks of a file.
 
 **Prerequisites**
 
-This script depends on <b>parallel</b> and <b>openssl</b>. If you are using
-Homebrew, then run the following:
+This script depends on <b>parallel</b> and <b>openssl</b>. If you are on Mac OS X
+and are using Homebrew, then run the following:
 
     brew install openssl
     brew install parallel
+
+It does not depend on any of the other scripts in this repository and can be
+used stand-alone.
 
 **Script Usage**
 
