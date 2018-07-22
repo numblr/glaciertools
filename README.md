@@ -2,6 +2,8 @@
 
 ## glacierupload
 
+Orchestrates a multipart upload of a file to AWS glacier.
+
 **Prerequisites**
 
 This script depends on <b>jq</b>, <b>openssl</b> and <b>parallel</b>. If you are
@@ -78,13 +80,15 @@ used stand-alone.
     treehash [-b|--block <size>] [-a|--alg <alg>] [-v|--verbose <level>] <file>
 
 
-    -b --block    size of the leave data blocks in bytes, defaults to 1M.
-                  can be postfixed with K, M, G, T, P, E, k, m, g, t, p, or e,
-                  see the '--block' option of the 'parallel' command for details.
-    -a --alg      hash algorithm to use, defaults to 'sha256'. Supported
-                  algorithms are the ones supported by 'openssl dgst'
-    -v --verbose  print diagnostic messages to stderr if level is large then 0
-    -h --help     print help message
+    -b --block       size of the leave data blocks in bytes, defaults to 1M.
+                     can be postfixed with K, M, G, T, P, E, k, m, g, t, p, or e,
+                     see the '--block' option of the 'parallel' command for details.
+    -a --alg         hash algorithm to use, defaults to 'sha256'. Supported
+                     algorithms are the ones supported by 'openssl dgst'
+    -v  --verbosity  print diagnostic messages to stderr if level is large then 0:
+                      * level 1: Print the entire tree
+                      * level 2: Print debug information
+    -h --help        print help message
 
 The script calculates the hash purely from the provided file and does not create
 any temporary files nor does it require that the chunks of the file are present
