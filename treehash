@@ -15,16 +15,18 @@ readonly TAB=$'\t'
 ########
 
 function print_usage {
-  echo "usage: treehash [-b|--block <size>] [-a|--alg <alg>] [-v|--verbose <level>] <file>"
+  echo "usage: treehash [-b|--block <size>] [-a|--alg <alg>] [-v|--verbosity <level>] <file>"
   echo ""
   echo "Calculates the top level hash of a Merkel tree (tree hash) built from equal sized chunks of a file."
   echo ""
-  echo "    --block    size of the leave data blocks in bytes, defaults to 1M."
-  echo "               can be postfixed with K, M, G, T, P, E, k, m, g, t, p, or e,"
-  echo "               see the '--block' option of the 'parallel' command for details."
-  echo "    --alg      hash algorithm to use, defaults to 'sha256'. Supported"
-  echo "               algorithms are the ones supported by 'openssl dgst'"
-  echo "    --verbose  print diagnostic messages to stderr if level is large then 0"
+  echo "    --block      size of the leave data blocks in bytes, defaults to 1M."
+  echo "                 can be postfixed with K, M, G, T, P, E, k, m, g, t, p, or e,"
+  echo "                 see the '--block' option of the 'parallel' command for details."
+  echo "    --alg        hash algorithm to use, defaults to 'sha256'. Supported"
+  echo "                 algorithms are the ones supported by 'openssl dgst'"
+  echo "    --verbosity  print diagnostic messages to stderr if level is large then 0:"
+  echo "                   * level 1: Print the entire tree"
+  echo "                   * level 2: Print debug information"
 }
 
 arg_positional=()
@@ -41,7 +43,7 @@ while [[ $# -gt 0 ]]; do
       shift # past argument
       shift # past value
       ;;
-      -v|--verbose)
+      -v|--verbosity)
       arg_log="$2"
       shift # past argument
       shift # past value
@@ -59,6 +61,14 @@ while [[ $# -gt 0 ]]; do
 done
 set -- "${arg_positional[@]}" # restore positional parameters
 
+if [[ -n "$arg_log" ]] && ! [[ "$arg_log" -eq "$arg_log" ]] 2> /dev/null
+then
+    echo "verbosity level must be an integer!"
+    echo ""
+    print_usage
+    exit 1
+fi
+
 readonly log=${arg_log:-0}
 readonly block_size="${arg_block:-1M}"
 readonly hash_alg="${arg_alg:-sha256}"
@@ -74,6 +84,10 @@ function combine_hash {
       | openssl dgst -"$hash_alg" -hex | cut -f 2 -d ' '
 }
 
+function indent {
+  depth=$(($1*4))
+  eval ">&2 printf ' %.0s' {1..$depth}"
+}
 
 ############
 # Calculate tree hash iterating stdin
@@ -88,11 +102,11 @@ function calculate_root_hash {
     local hash
     read -r hash && hash="${hash##* }"
     if [[ -z "$hash" ]]; then
-      ((log > 0)) && >&2 echo "Input exhausted" || :
+      ((log > 1)) && >&2 echo "Input exhausted" || :
       exit 0
     fi
 
-    ((log > 0)) && >&2 echo "Read $hash" || :
+    ((log > 1)) && >&2 echo "Read $hash" || :
     echo -n "$hash"
     exit 0
   fi
@@ -100,18 +114,18 @@ function calculate_root_hash {
   # Recurse to calculate left/right child hashes and combine them
   left=$(calculate_root_hash $((max_depth - 1)))
   if [[ -z "$left" ]]; then
-    ((log > 0)) && >&2 echo "Terminate: no left root"|| :
+    ((log > 1)) && >&2 echo "Terminate: no left root"|| :
     exit 0
   fi
-  ((log > 0)) && >&2 echo "Left root: $left" || :
+  ((log > 0)) && indent $max_depth && >&2 echo "left ($((max_depth-1))): $left" || :
 
   right=$(calculate_root_hash $((max_depth - 1)))
   if [[ -z "$right" ]]; then
-    ((log > 0)) && >&2 echo "Terminate: no right root" || :
+    ((log > 1)) && >&2 echo "Terminate: no right root" || :
     echo -n "$left"
     exit 0
   fi
-  ((log > 0)) && >&2 echo "Right root: $right" || :
+  ((log > 0)) && indent $max_depth && >&2 echo "right ($((max_depth-1))): $right" || :
 
   combine_hash "$left" "$right"
 }
@@ -126,30 +140,30 @@ function calculate_hash {
     local first
     first="$(calculate_root_hash 0)"
     if [[ -z "$first" ]]; then
-      ((log > 0)) && >&2 echo "No input" || :
+      ((log > 1)) && >&2 echo "No input" || :
       exit 0
     fi
 
-    ((log > 0)) && >&2 echo "Initialize with $first" || :
+    ((log > 1)) && >&2 echo "Initialize with $first" || :
     calculate_hash "$first" 0
     exit 0
   fi
 
-  ((log > 0)) && >&2 echo "Calculate hash at level $level" || :
+  ((log > 1)) && >&2 echo "Calculate hash at level $level" || :
+  ((log > 0)) && indent $((level+1)) && >&2 echo "Left ($level): $left" || :
 
   # Calculate right child and recurse to calculate the next level
   right=$(calculate_root_hash $level)
   if [[ -z "$right" ]]; then
-    ((log > 0)) && >&2 echo "Terminate: no right child, return left: $left" || :
+    ((log > 1)) && >&2 echo "Terminate: no right child, return left: $left" || :
     echo -n "$left"
     exit 0
   fi
 
-  ((log > 0)) && >&2 echo "Left child ($level): $left" || :
-  ((log > 0)) && >&2 echo "Right child ($level): $right" || :
+  ((log > 0)) && indent $((level+1)) && >&2 echo "Right ($level): $right" || :
 
   combined=$(combine_hash "$left" "$right")
-  ((log > 0)) && >&2 echo "Combined hash ($level): $right" || :
+  ((log > 1)) && indent $((level+1)) && >&2 echo "Combined hash ($level): $combined" || :
 
   calculate_hash "$combined" $((level + 1))
 }
