@@ -19,50 +19,24 @@ readonly SCRIPT="$(cd "$(dirname "$0")"; pwd)"
 readonly JOBS="100%"
 
 readonly MB=1048576
-# Max line size for xxd is 256
-readonly LINE_SIZE=256
+
 
 ##########
-# Utility functions: Binary data handling
-# Convert binary data to lines of 256-byte hex strings
+# Utility functions
 ##########
-
-
-function to_hex {
-  xxd -p -c "$LINE_SIZE" | set_line_number
-}
-
-function to_binary {
-  get_data | xxd -p -r
-}
-
-function get_line_number {
-  cut -f 1
-}
-
-function get_data {
-  cut -f 2
-}
-
-function set_line_number {
-  cat -n
-}
 
 function byte_range {
-  hex_data="$1"
+  count=$1
 
-  line_numbers="$(echo -n "$1" | get_line_number | tr '\n' ' ' | tr '\t' ' ' | xargs echo -n)"
-  first_line=${line_numbers%% *}
-  last_line=${line_numbers##* }
-
-  start=$(( (first_line-1)*LINE_SIZE ))
-  end=$(( last_line*LINE_SIZE-1 ))
+  start=$(( (count-1)*part_size ))
+  end=$(( count*part_size-1 ))
 
   # Handle last chunk
   end=$(( end > (file_size-1) ? (file_size-1) : end ))
 
   echo -n "$start-$end"
 }
+
 
 #############
 # Initialize parameters and variables
@@ -118,14 +92,14 @@ echo "Start upload $upload_id"
 
 
 function upload_part {
-  hex_data="$(cat)"
-  range=$(byte_range "$hex_data")
+  # Write part data with range information to tmp file
+  part="$(mktemp)"
+  cat > "$part"
+
+  count=$1
+  range="$(byte_range "$count")"
 
   echo "Uploading range $range ($(( ${range##*-}/part_size ))/$(( file_size/part_size )))"
-
-  # Write part data to tmp file
-  part="$(echo -n "$range" | tr '-' '_').part"
-  echo -n "$hex_data" | to_binary > "$part"
 
   upload_args=()
   if [[ -n "$profile" ]]; then
@@ -149,7 +123,7 @@ function upload_part {
     exit $succes
   fi
 
-  echo "Finished upload of range $range"
+  echo "Finished upload of range $range ($(( ${range##*-}/part_size ))/$(( file_size/part_size )))"
 
   # Remove tmp file
   rm "$part"
@@ -162,20 +136,16 @@ cd "$tmp_dir" || exit 1
 echo "From temporary directory: $tmp_dir"
 echo ""
 
-# Number of lines of hex data per part
-records=$((part_size/LINE_SIZE))
-
 # parallel runs in a subprocess
-export -f to_binary to_hex get_line_number get_data set_line_number byte_range
-export -f upload_part
+export -f upload_part byte_range
 
-export SCRIPT JOBS MB LINE_SIZE
+export SCRIPT JOBS MB
 export upload_id
-export records file_size part_size split_size
+export file_size part_size split_size
 export profile description archive vault
 
-parallel --no-notice --halt now,fail=1 --line-buffer ::: \
-  'cat "$archive" | to_hex | parallel --no-notice --halt now,fail=1 --pipe -N$records upload_part -j $JOBS --line-buffer' \
+parallel --no-notice --halt now,fail=1 --line-buffer -j $JOBS ::: \
+  'parallel -a $archive --no-notice --pipepart --block $part_size --recend "" -j $JOBS --line-buffer --halt now,fail=1 "upload_part {#}"' \
   '"$SCRIPT"/treehash "$archive" > treehash.sha'
 
 readonly treehash="$(< treehash.sha)"
