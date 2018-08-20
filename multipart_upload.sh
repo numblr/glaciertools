@@ -143,6 +143,12 @@ function upload_part {
 
   aws "${upload_args[@]}"
 
+  success=$?
+  if (($success > 0)); then
+    # echo "Upload of range $range failed"
+    exit $succes
+  fi
+
   echo "Finished upload of range $range"
 
   # Remove tmp file
@@ -168,8 +174,8 @@ export upload_id
 export records file_size part_size split_size
 export profile description archive vault
 
-parallel --no-notice --line-buffer ::: \
-  'cat "$archive" | to_hex | parallel --no-notice --pipe -N$records upload_part -j $JOBS --line-buffer' \
+parallel --no-notice --halt now,fail=1 --line-buffer ::: \
+  'cat "$archive" | to_hex | parallel --no-notice --halt now,fail=1 --pipe -N$records upload_part -j $JOBS --line-buffer' \
   '"$SCRIPT"/treehash "$archive" > treehash.sha'
 
 readonly treehash="$(< treehash.sha)"
