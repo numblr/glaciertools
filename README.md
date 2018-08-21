@@ -2,11 +2,11 @@
 
 ## glacierupload
 
-Orchestrates a multipart upload of a file to AWS glacier.
+The script orchestrates the multipart upload of a large file to AWS Glacier.
 
 **Prerequisites**
 
-This script depends on <b>jq</b>, <b>openssl</b> and <b>parallel</b>. If you are
+This script depends on **jq**, **openssl** and **parallel**. If you are
 on Mac OS X and using Homebrew, then run the following:
 
     brew install jq
@@ -17,7 +17,7 @@ The script assumes you have an AWS account, and have signed up for the glacier
 service and have created a vault already.
 
 It also assumes that you have the
-<a href="http://docs.aws.amazon.com/cli/latest/userguide/installing.html">AWS Command Line Interface</a>
+[AWS Command Line Interface](http://docs.aws.amazon.com/cli/latest/userguide/installing.html)
 installed on your machine, e.g. by:
 
     pip install awscli
@@ -55,25 +55,50 @@ of the archive id and '.upload.json'.
 
 The script splits the file to upload on the fly and only stores parts that are
 currently uploaded temporarily on disk, i.e. the amount of required free disk
-space is low. The size of the individual chunks can be controlled by the --split-size
-option. The number of parallel uploads is determined by parallel based on the
-number of available CPUs.
+space is low and depends on the used chunk size and number of parallel uploads.
+The size of the individual chunks can be controlled by the *--split-size* option.
+The number of parallel uploads is determined by parallel based on the number of
+available CPUs.
+
+**Be aware of the [constraints](https://docs.aws.amazon.com/amazonglacier/latest/dev/uploading-archive-mpu.html#qfacts)
+on the number and size of the chunks in the AWS Glacier specifications!**
+
+**Examples**
+
+To simply upload */path/to/my/archive* to *myvault* use
+
+    > ./glacierupload -v myvault /path/to/my/archive
+
+This will upload the archive in 1MB chunks using the standard credentials that
+are configured for the aws cli.
+
+The following command
+
+    > ./glacierupload -p my_aws_cli_profile -v myvault -s 5 -d "My favorite archive" /path/to/my/archive
+
+will upload */path/to/my/archive* to *myvault* on AWS glacier with a short
+description. The command will use the credentials in the that were configured in
+the *my_aws_cli_profile* in aws cli beforehand. Instead of the default part size
+of 1MB the archive is uploaded in 2^5=32MB chunks.
 
 ## treehash
 
 The script calculates the top level hash of a Merkel tree (tree hash) built from
 equal sized chunks of a file.
 
+If possible, i.e. if multiple CPUs are available on your system, the script
+parallelizes the computation of the tree hash.
+
+The script does not depend on any of the other scripts in this repository and can
+be used stand-alone.
+
 **Prerequisites**
 
-This script depends on <b>parallel</b> and <b>openssl</b>. If you are on Mac OS X
+This script depends on **parallel** and **openssl**. If you are on Mac OS X
 and are using Homebrew, then run the following:
 
     brew install openssl
     brew install parallel
-
-It does not depend on any of the other scripts in this repository and can be
-used stand-alone.
 
 **Script Usage**
 
@@ -90,6 +115,17 @@ used stand-alone.
                       * level 2: Print debug information
     -h --help        print help message
 
-The script calculates the hash purely from the provided file and does not create
-any temporary files nor does it require that the chunks of the file are present
-as files on the disk.
+The script does not create any temporary files nor does it require that the chunks
+of the file are present as files on the disk.
+
+**Examples**
+
+To calculate the tree hash of */path/to/my/archive* with a chunk size of 1MB and
+the *sha-256* hash algorithm use
+
+    > ./treehash /path/to/my/archive
+
+
+## References
+
+* O. Tange (2011): GNU Parallel - The Command-Line Power Tool, ;login: The USENIX Magazine, February 2011:42-47.
