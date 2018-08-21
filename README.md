@@ -69,17 +69,17 @@ To simply upload */path/to/my/archive* to *myvault* use
 
     > ./glacierupload -v myvault /path/to/my/archive
 
-This will upload the archive in 1MB chunks using the standard credentials that
-are configured for the aws cli.
+This will upload the archive in 1MByte chunks using the standard credentials
+that are configured for the aws cli.
 
 The following command
 
     > ./glacierupload -p my_aws_cli_profile -v myvault -s 5 -d "My favorite archive" /path/to/my/archive
 
 will upload */path/to/my/archive* to *myvault* on AWS glacier with a short
-description. The command will use the credentials in the that were configured in
-the *my_aws_cli_profile* in aws cli beforehand. Instead of the default part size
-of 1MB the archive is uploaded in 2^5=32MB chunks.
+description. The credentials that were configured in the *my_aws_cli_profile*
+in the aws cli will be used. Instead of the default part size of 1MB the
+archive is uploaded in 2^5=32MByte chunks.
 
 ## treehash
 
