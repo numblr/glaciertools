@@ -113,7 +113,7 @@ function upload_part {
   upload_args+=("bytes $range/*")
   upload_args+=('--vault-name')
   upload_args+=("$vault")
-  upload_args+=('--upload-id' "$upload_id")
+  upload_args+=('--upload-id='"$upload_id")
 
   aws "${upload_args[@]}"
 
