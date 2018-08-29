@@ -113,7 +113,7 @@ function upload_part {
   upload_args+=("bytes $range/*")
   upload_args+=('--vault-name')
   upload_args+=("$vault")
-  upload_args+=('--upload-id='"$upload_id")
+  upload_args+=("--upload-id=$upload_id")
 
   aws "${upload_args[@]}"
 
@@ -176,7 +176,7 @@ complete_args+=('--checksum' "$treehash")
 complete_args+=('--archive-size' "$file_size")
 complete_args+=('--vault-name')
 complete_args+=("$vault")
-complete_args+=('--upload-id' "$upload_id")
+complete_args+=("--upload-id=$upload_id")
 
 readonly result=$(aws "${complete_args[@]}")
 
