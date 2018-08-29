@@ -1,5 +1,9 @@
 # Command line tools (Bash scripts) to upload large files to AWS Glacier
 
+## Commands
+**[glacierupload](#glacierupload)**<br>
+**[treehash](#treehash)**
+
 ## glacierupload
 
 The script orchestrates the multipart upload of a large file to AWS Glacier.
