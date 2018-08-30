@@ -19,12 +19,12 @@ function print_usage {
   echo ""
   echo "Calculates the top level hash of a Merkel tree (tree hash) built from equal sized chunks of a file."
   echo ""
-  echo "    --block      size of the leave data blocks in bytes, defaults to 1M."
+  echo "    --block      size of the leaf data blocks in bytes, defaults to 1M."
   echo "                 can be postfixed with K, M, G, T, P, E, k, m, g, t, p, or e,"
   echo "                 see the '--block' option of the 'parallel' command for details."
   echo "    --alg        hash algorithm to use, defaults to 'sha256'. Supported"
   echo "                 algorithms are the ones supported by 'openssl dgst'"
-  echo "    --verbosity  print diagnostic messages to stderr if level is large then 0:"
+  echo "    --verbosity  print diagnostic messages to stderr if level is larger than 0:"
   echo "                   * level 1: Print the entire tree"
   echo "                   * level 2: Print debug information"
 }
@@ -79,9 +79,8 @@ readonly hash_alg="${arg_alg:-sha256}"
 ##########
 
 function combine_hash {
-  # Convert hex format to binary, concat and hash
-  cat <(echo -n "$1" | xxd -r -p) <(echo -n "$2" | xxd -r -p) \
-      | openssl dgst -"$hash_alg" -hex | cut -f 2 -d ' '
+  # Concat, convert hex format to binary and hash
+  echo -n "$1$2" | xxd -r -p | openssl dgst -"$hash_alg" -hex | cut -f 2 -d ' '
 }
 
 function indent {
@@ -97,7 +96,7 @@ function calculate_root_hash {
   local left right max_depth
   max_depth="$1"
 
-  # Base case: read chunk from stdin and calculate leave hash
+  # Base case: read chunk from stdin and calculate leaf hash
   if (( max_depth == 0 )); then
     local hash
     read -r hash && hash="${hash##* }"
