@@ -109,7 +109,7 @@ and are using Homebrew, then run the following:
     treehash [-b|--block <size>] [-a|--alg <alg>] [-v|--verbose <level>] <file>
 
 
-    -b --block       size of the leave data blocks in bytes, defaults to 1M.
+    -b --block       size of the leaf data blocks in bytes, defaults to 1M.
                      can be postfixed with K, M, G, T, P, E, k, m, g, t, p, or e,
                      see the '--block' option of the 'parallel' command for details.
     -a --alg         hash algorithm to use, defaults to 'sha256'. Supported
