@@ -114,7 +114,7 @@ and are using Homebrew, then run the following:
                      see the '--block' option of the 'parallel' command for details.
     -a --alg         hash algorithm to use, defaults to 'sha256'. Supported
                      algorithms are the ones supported by 'openssl dgst'
-    -v  --verbosity  print diagnostic messages to stderr if level is large then 0:
+    -v  --verbosity  print diagnostic messages to stderr if level is larger than 0:
                       * level 1: Print the entire tree
                       * level 2: Print debug information
     -h --help        print help message
