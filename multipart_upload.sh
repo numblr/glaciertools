@@ -77,6 +77,8 @@ init_args+=('--vault-name')
 init_args+=("$vault")
 init_args+=('--archive-description')
 init_args+=("$description")
+init_args+=('--output')
+init_args+=('json')
 
 readonly init="$(aws "${init_args[@]}")"
 
@@ -177,6 +179,9 @@ complete_args+=('--archive-size' "$file_size")
 complete_args+=('--vault-name')
 complete_args+=("$vault")
 complete_args+=("--upload-id=$upload_id")
+complete_args+=('--output')
+complete_args+=('json')
+
 
 readonly result=$(aws "${complete_args[@]}")
 

@@ -51,6 +51,9 @@ abort_args+=('--account-id' '-')
 abort_args+=('--vault-name')
 abort_args+=("$vault")
 abort_args+=('--upload-id')
+abort_args+=('--output')
+abort_args+=('json')
+
 
 aws "${list_args[@]}" \
   | jq '.UploadsList | .['$i'] | .MultipartUploadId' \
