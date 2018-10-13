@@ -1,6 +1,5 @@
 #!/bin/bash
 
-set -e
 # Debug
 # set -x
 
@@ -178,6 +177,11 @@ function multipart_upload {
     'parallel -a $archive --no-notice --pipepart --block $part_size --recend "" -j $JOBS --line-buffer --halt now,fail=1 --retries $RETRIES "upload_part {#}"' \
     '"$SCRIPT"/treehash "$archive" > treehash.sha'
 
+  success=$?
+  if (($success > 0)); then
+    return $success
+  fi
+
   readonly treehash="$(< treehash.sha)"
 
   # Return to original directory
@@ -209,8 +213,12 @@ function multipart_upload {
   complete_args+=('--output')
   complete_args+=('json')
 
-
   readonly result=$(aws "${complete_args[@]}")
+
+  success=$?
+  if (($success > 0)); then
+    return $success
+  fi
 
   echo "$result" | jq '.'
   readonly archive_id="$(echo "$result" | jq '.archiveId' | xargs)"
@@ -246,7 +254,6 @@ function upload_part {
 
   success=$?
   if (($success > 0)); then
-    # echo "Upload of range $range failed"
     exit $success
   fi
 
@@ -262,8 +269,8 @@ function upload_part {
 #########
 
 for file in "${files[@]}"; do
-  closeupload_args=("$vault")
-  closeupload_args+=("$profile")
+  closeupload_args=('--vault' "$vault")
+  closeupload_args+=('--profile' "$profile")
 
   multipart_upload "$file" || "$SCRIPT"/glacierclose "${closeupload_args[@]}"
 done
