@@ -2,6 +2,7 @@
 
 ## Commands
 **[glacierupload](#glacierupload)**<br>
+**[glacierclose](#glacierclose)**<br>
 **[treehash](#treehash)**
 
 ## glacierupload
@@ -67,6 +68,10 @@ available CPUs.
 **Be aware of the [constraints](https://docs.aws.amazon.com/amazonglacier/latest/dev/uploading-archive-mpu.html#qfacts)
 on the number and size of the chunks in the AWS Glacier specifications!**
 
+In case the upload of a part fails, the script performs a number of retries. If
+the upload of a part ultimately fails after the maximum number of retries, the
+script aborts the upload and terminates.
+
 **Examples**
 
 To simply upload */path/to/my/archive* to *myvault* use
@@ -84,6 +89,27 @@ will upload */path/to/my/archive* to *myvault* on AWS glacier with a short
 description. The credentials that were configured in the *my_aws_cli_profile*
 in the aws cli will be used. Instead of the default part size of 1MB the
 archive is uploaded in 2^5=32MByte chunks.
+
+
+## glacierclose
+
+Close (abort) all unfinished uploads to a vault on AWS Glacier.
+
+**Script Usage**
+
+    glacierclose -v|--vault <vault> [-p|--profile <profile>]
+
+    -v --vault        name of the vault to which the file should be uploaded  
+    -p --profile      optional profile name to use for the upload. The profil
+                      name must be configured with the aws cli client.
+    -h --help         print help message
+
+**Examples**
+
+To close all currently unfinished uploads run
+
+    > ./glacierclose -v myvault
+
 
 ## treehash
 
