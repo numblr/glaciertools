@@ -12,6 +12,7 @@ set -e
 readonly SCRIPT="$(cd "$(dirname "$0")"; pwd)"
 # Number of parallel uploads
 readonly JOBS="100%"
+readonly RETRIES=10
 
 readonly MB=1048576
 
@@ -168,13 +169,13 @@ function multipart_upload {
   # parallel runs in a subprocess
   export -f upload_part byte_range
 
-  export SCRIPT JOBS MB
+  export SCRIPT JOBS RETRIES MB
   export upload_id
   export file_size part_size split_size
   export profile description archive vault
 
   parallel --no-notice --halt now,fail=1 --line-buffer -j $JOBS ::: \
-    'parallel -a $archive --no-notice --pipepart --block $part_size --recend "" -j $JOBS --line-buffer --halt now,fail=1 "upload_part {#}"' \
+    'parallel -a $archive --no-notice --pipepart --block $part_size --recend "" -j $JOBS --line-buffer --halt now,fail=1 --retries $RETRIES "upload_part {#}"' \
     '"$SCRIPT"/treehash "$archive" > treehash.sha'
 
   readonly treehash="$(< treehash.sha)"
@@ -246,7 +247,7 @@ function upload_part {
   success=$?
   if (($success > 0)); then
     # echo "Upload of range $range failed"
-    exit $succes
+    exit $success
   fi
 
   echo "Finished upload of range $range ($(( ${range##*-}/part_size ))/$(( file_size/part_size )))"
