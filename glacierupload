@@ -138,14 +138,14 @@ function multipart_upload {
     init_args+=("$profile")
   fi
   init_args+=('glacier' 'initiate-multipart-upload')
+  init_args+=('--output')
+  init_args+=('json')
   init_args+=('--account-id' '-')
   init_args+=('--part-size' "$part_size")
   init_args+=('--vault-name')
   init_args+=("$vault")
   init_args+=('--archive-description')
   init_args+=("$description")
-  init_args+=('--output')
-  init_args+=('json')
 
   local -r init="$(aws "${init_args[@]}")"
 
@@ -204,14 +204,14 @@ function multipart_upload {
     complete_args+=("$profile")
   fi
   complete_args+=('glacier' 'complete-multipart-upload')
+  complete_args+=('--output')
+  complete_args+=('json')
   complete_args+=('--account-id' '-')
   complete_args+=('--checksum' "$treehash")
   complete_args+=('--archive-size' "$file_size")
   complete_args+=('--vault-name')
   complete_args+=("$vault")
   complete_args+=("--upload-id=$upload_id")
-  complete_args+=('--output')
-  complete_args+=('json')
 
   local -r result=$(aws "${complete_args[@]}")
 
