@@ -24,13 +24,13 @@ RUN adduser aws
 WORKDIR /home/aws
 USER aws
 
-COPY --chown=aws glacierupload glacierclose treehash  ./
+COPY --chown=aws glacierupload glacierabort treehash  ./
 COPY --chown=aws test/glacierupload/test_upload.sh  ./
 COPY --chown=aws test/glacierupload/config .aws/config
 COPY --chown=aws test/glacierupload/credentials .aws/credentials
 
 RUN chmod +x glacierupload
-RUN chmod +x glacierclose
+RUN chmod +x glacierabort
 RUN chmod +x treehash
 RUN chmod +x test_upload.sh
 

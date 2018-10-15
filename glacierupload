@@ -272,5 +272,5 @@ for file in "${files[@]}"; do
   closeupload_args=('--vault' "$vault")
   closeupload_args+=('--profile' "$profile")
 
-  multipart_upload "$file" || "$SCRIPT"/glacierclose "${closeupload_args[@]}"
+  multipart_upload "$file" || "$SCRIPT"/glacierabort "${closeupload_args[@]}"
 done

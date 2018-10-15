@@ -10,9 +10,9 @@ set -e
 ########
 
 function print_usage {
-  echo "usage: glacierclose -v|--vault <vault> [-p|--profile <profile>]"
+  echo "usage: glacierabort -v|--vault <vault> [-p|--profile <profile>]"
   echo ""
-  echo "Close all active multipart uploads to a vault on AWS glacier."
+  echo "Abort all active multipart uploads to a vault on AWS glacier."
   echo ""
   echo "    --vault        name of the vault on AWS glacier"
   echo "    --profile      optional profile name to use. The profile"

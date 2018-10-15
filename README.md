@@ -2,7 +2,7 @@
 
 ## Commands
 **[glacierupload](#glacierupload)**<br>
-**[glacierclose](#glacierclose)**<br>
+**[glacierabort](#glacierabort)**<br>
 **[treehash](#treehash)**
 
 ## glacierupload
@@ -91,13 +91,13 @@ in the aws cli will be used. Instead of the default part size of 1MB the
 archive is uploaded in 2^5=32MByte chunks.
 
 
-## glacierclose
+## glacierabort
 
-Close (abort) all unfinished uploads to a vault on AWS Glacier.
+Abort (close) all unfinished uploads to a vault on AWS Glacier.
 
 **Script Usage**
 
-    glacierclose -v|--vault <vault> [-p|--profile <profile>]
+    glacierabort -v|--vault <vault> [-p|--profile <profile>]
 
     -v --vault        name of the vault to which the file should be uploaded  
     -p --profile      optional profile name to use for the upload. The profil
@@ -108,7 +108,7 @@ Close (abort) all unfinished uploads to a vault on AWS Glacier.
 
 To close all currently unfinished uploads run
 
-    > ./glacierclose -v myvault
+    > ./glacierabort -v myvault
 
 
 ## treehash
