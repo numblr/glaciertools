@@ -89,8 +89,7 @@ list_args+=('glacier' 'list-multipart-uploads')
 list_args+=('--account-id' '-')
 list_args+=('--vault-name')
 list_args+=("$vault")
-abort_args+=('--output')
-abort_args+=('json')
+list_args+=('--output' 'json')
 
 abort_args=()
 if [[ -n "$profile" ]]; then
@@ -103,7 +102,7 @@ abort_args+=("$vault")
 
 aws "${list_args[@]}" \
   | jq '.UploadsList | .['$i'] | .MultipartUploadId' \
-  | xargs -t -P4 -L1 -I {} aws glacier abort-multipart-upload --upload-id={} "${abort_args[@]}"
+  | xargs -t -I {} aws glacier abort-multipart-upload --upload-id={} "${abort_args[@]}"
 
 echo ""
 echo "Remaining active uploads:"
