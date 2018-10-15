@@ -43,7 +43,7 @@ You can verify that your connection works by describing the vault you have creat
                    <-v|--vault vault> <file>
 
     -v --vault        name of the vault to which the file should be uploaded  
-    -p --profile      optional profile name to use for the upload. The profil
+    -p --profile      optional profile name to use for the upload. The profile
                       name must be configured with the aws cli client.
     -d --description  optinal description of the file
     -s --split-size   level that determines the size of the parts used for
@@ -99,14 +99,14 @@ Abort (close) all unfinished uploads to a vault on AWS Glacier.
 
     glacierabort -v|--vault <vault> [-p|--profile <profile>]
 
-    -v --vault        name of the vault to which the file should be uploaded  
-    -p --profile      optional profile name to use for the upload. The profil
-                      name must be configured with the aws cli client.
+    -v --vault        name of the vault for which uploads should be aborted  
+    -p --profile      optional profile name to use. The profile name must be
+                      configured with the aws cli client.
     -h --help         print help message
 
 **Examples**
 
-To close all currently unfinished uploads run
+To abort all currently unfinished uploads run
 
     > ./glacierabort -v myvault
 
