@@ -118,11 +118,11 @@ function byte_range {
 #########
 
 function multipart_upload {
-  readonly archive="$(cd "$(dirname "$1")"; pwd)/$(basename "$1")"
+  local -r archive="$(cd "$(dirname "$1")"; pwd)/$(basename "$1")"
 
   # Only powers of 2 are allowed, max is 2**22
-  readonly part_size=$(( 2**split_size * MB ))
-  readonly file_size=$(wc -c < "$archive")
+  local -r part_size=$(( 2**split_size * MB ))
+  local -r file_size=$(wc -c < "$archive")
 
   echo ""
   echo "---------------------------------------"
@@ -147,10 +147,10 @@ function multipart_upload {
   init_args+=('--output')
   init_args+=('json')
 
-  readonly init="$(aws "${init_args[@]}")"
+  local -r init="$(aws "${init_args[@]}")"
 
   # xargs trims off the quotes
-  readonly upload_id=$(echo "$init" | jq '.uploadId' | xargs)
+  local -r upload_id=$(echo "$init" | jq '.uploadId' | xargs)
 
 
   #########
@@ -177,12 +177,12 @@ function multipart_upload {
     'parallel -a $archive --no-notice --pipepart --block $part_size --recend "" -j $JOBS --line-buffer --halt now,fail=1 --retries $RETRIES "upload_part {#}"' \
     '"$SCRIPT"/treehash "$archive" > treehash.sha'
 
-  success=$?
-  if (($success > 0)); then
-    return $success
+  failure=$?
+  if (($failure > 0)); then
+    return $failure
   fi
 
-  readonly treehash="$(< treehash.sha)"
+  local -r treehash="$(< treehash.sha)"
 
   # Return to original directory
   echo -n "Returning to "
@@ -213,15 +213,15 @@ function multipart_upload {
   complete_args+=('--output')
   complete_args+=('json')
 
-  readonly result=$(aws "${complete_args[@]}")
+  local -r result=$(aws "${complete_args[@]}")
 
-  success=$?
-  if (($success > 0)); then
-    return $success
+  failure=$?
+  if (($failure > 0)); then
+    return $failure
   fi
 
   echo "$result" | jq '.'
-  readonly archive_id="$(echo "$result" | jq '.archiveId' | xargs)"
+  local -r archive_id="$(echo "$result" | jq '.archiveId' | xargs)"
   echo "$result" > "$(basename "$archive").${archive_id:0:8}.upload.json"
 }
 
@@ -252,9 +252,9 @@ function upload_part {
 
   aws "${upload_args[@]}"
 
-  success=$?
-  if (($success > 0)); then
-    exit $success
+  failure=$?
+  if (($failure > 0)); then
+    exit $failure
   fi
 
   echo "Finished upload of range $range ($(( ${range##*-}/part_size ))/$(( file_size/part_size )))"
