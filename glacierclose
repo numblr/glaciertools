@@ -1,0 +1,110 @@
+#!/bin/bash
+
+set -e
+# Debug
+# set -x
+
+
+########
+# Parse command line options
+########
+
+function print_usage {
+  echo "usage: glacierclose -v|--vault <vault> [-p|--profile <profile>]"
+  echo ""
+  echo "Close all active multipart uploads to a vault on AWS glacier."
+  echo ""
+  echo "    --vault        name of the vault on AWS glacier"
+  echo "    --profile      optional profile name to use. The profile"
+  echo "                   name must be configured with the AWS CLI client."
+  echo "    --help         print this message"
+}
+
+arg_positional=()
+while [[ $# -gt 0 ]]; do
+  key="$1"
+
+  case $key in
+      -h|--help)
+      print_usage
+      exit 0
+      ;;
+      -p|--profile)
+      arg_profile="$2"
+      shift # past argument
+      shift # past value
+      ;;
+      -v|--vault)
+      arg_vault="$2"
+      shift # past argument
+      shift # past value
+      ;;
+      *)    # unknown option
+      arg_positional+=("$1") # save it in an array for later
+      shift # past argument
+      ;;
+  esac
+done
+set -- "${arg_positional[@]}" # restore positional parameters
+
+if [ -z "$arg_vault" ]; then
+  echo "No vault specified!"
+  print_usage
+  exit 1
+fi
+
+readonly vault="$arg_vault"
+readonly profile="${arg_profile:-}"
+
+
+########
+# Close uploads
+########
+
+
+echo ""
+echo "Closing active uploads:"
+
+# Result of > aws glacier list-multipart-uploads
+# {
+#     "UploadsList": [
+#         {
+#             "MultipartUploadId": "RPI2Y4chvSaw1r19wVP717hghGEIV07i6WicIoNRj-6C1WBhSzAT4FRf-g0hGm8JvKWBE-vlSvTolospe9c-TCCViv_H",
+#              ...
+#              "VaultARN": "arn:aws:glacier:eu-west-1:190631152724:vaults/test"
+#         },
+#         {
+#             "MultipartUploadId": "BwqY0NTHjTX6bI8s8YlF0l2on9GYOwpXKO1L4RLEl0Bf5hrPBd9XB29zra1di3lLE6Mi5WU-ouTcDEWCqdjpqBb5d7lK",
+#              ...
+#             "VaultARN": "arn:aws:glacier:eu-west-1:190631152724:vaults/test"
+#         }
+#     ]
+# }
+list_args=()
+if [[ -n "$profile" ]]; then
+  list_args+=('--profile')
+  list_args+=("$profile")
+fi
+list_args+=('glacier' 'list-multipart-uploads')
+list_args+=('--account-id' '-')
+list_args+=('--vault-name')
+list_args+=("$vault")
+list_args+=('--output' 'json')
+
+abort_args=()
+if [[ -n "$profile" ]]; then
+  abort_args+=('--profile')
+  abort_args+=("$profile")
+fi
+abort_args+=('--account-id' '-')
+abort_args+=('--vault-name')
+abort_args+=("$vault")
+
+aws "${list_args[@]}" \
+  | jq '.UploadsList | .['$i'] | .MultipartUploadId' \
+  | xargs -t -I {} aws glacier abort-multipart-upload --upload-id={} "${abort_args[@]}"
+
+echo ""
+echo "Remaining active uploads:"
+
+aws "${list_args[@]}"
