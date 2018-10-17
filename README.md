@@ -1,5 +1,7 @@
 # Command line tools (Bash scripts) to upload large files to AWS Glacier
 
+An archive containing only the scripts can be downloaded from the [releases](https://github.com/numblr/glaciertools/releases) page. Some of the scripts depend on others and assume that they are in the same directory.
+
 ## Commands
 **[glacierupload](#glacierupload)**<br>
 **[glacierabort](#glacierabort)**<br>
