@@ -42,7 +42,7 @@ You can verify that your connection works by describing the vault you have creat
 **Script Usage**
 
     glacierupload [-p|--profile <profile>] [-d|--description <description>] [-s|--split-size <level>]
-                   <-v|--vault vault> <file>
+                   <-v|--vault vault> <file...>
 
     -v --vault        name of the vault to which the file should be uploaded  
     -p --profile      optional profile name to use for the upload. The profile
