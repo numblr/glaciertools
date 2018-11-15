@@ -95,7 +95,6 @@ readonly vault="$arg_vault"
 readonly description="${arg_description:-}"
 readonly split_size=${arg_split:-0}
 
-
 ##########
 # Utility functions
 ##########
@@ -139,7 +138,9 @@ function multipart_upload {
   fi
   init_args+=('glacier' 'initiate-multipart-upload')
   init_args+=('--output')
-  init_args+=('json')
+  init_args+=('text')
+  init_args+=('--query')
+  init_args+=('"uploadId"')
   init_args+=('--account-id' '-')
   init_args+=('--part-size' "$part_size")
   init_args+=('--vault-name')
@@ -150,7 +151,7 @@ function multipart_upload {
   local -r init="$(aws "${init_args[@]}")"
 
   # xargs trims off the quotes
-  local -r upload_id=$(echo "$init" | jq '.uploadId' | xargs)
+  local -r upload_id=$(echo "$init")
 
 
   #########
@@ -205,7 +206,9 @@ function multipart_upload {
   fi
   complete_args+=('glacier' 'complete-multipart-upload')
   complete_args+=('--output')
-  complete_args+=('json')
+  complete_args+=('text')
+  complete_args+=('--query')
+  complete_args+=('"archiveId"')
   complete_args+=('--account-id' '-')
   complete_args+=('--checksum' "$treehash")
   complete_args+=('--archive-size' "$file_size")
@@ -220,8 +223,8 @@ function multipart_upload {
     return $failure
   fi
 
-  echo "$result" | jq '.'
-  local -r archive_id="$(echo "$result" | jq '.archiveId' | xargs)"
+  echo "$result"
+  local -r archive_id="$(echo "$result")"
   echo "$result" > "$(basename "$archive").${archive_id:0:8}.upload.json"
 }
 
