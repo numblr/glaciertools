@@ -147,8 +147,7 @@ function multipart_upload {
   init_args+=("$vault")
   init_args+=('--archive-description')
   init_args+=("$description")
-echo ${init_args[@]}
-pause
+
   local -r init="$(aws "${init_args[@]}")"
 
   # xargs trims off the quotes
