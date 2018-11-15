@@ -15,8 +15,7 @@ RUN apt-get install -y \
     vim-nox \
     zip \
     parallel \
-    openssl \
-    jq
+    openssl
 
 RUN pip install awscli
 

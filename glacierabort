@@ -89,7 +89,8 @@ list_args+=('glacier' 'list-multipart-uploads')
 list_args+=('--account-id' '-')
 list_args+=('--vault-name')
 list_args+=("$vault")
-list_args+=('--output' 'json')
+list_args+=('--output' 'text')
+list_args+=('--query' 'UploadsList[*].MultipartUploadId')
 
 abort_args=()
 if [[ -n "$profile" ]]; then
@@ -98,10 +99,11 @@ if [[ -n "$profile" ]]; then
 fi
 abort_args+=('--account-id' '-')
 abort_args+=('--vault-name')
+abort_args+=('--output' 'json')
 abort_args+=("$vault")
 
 aws "${list_args[@]}" \
-  | jq '.UploadsList | .['$i'] | .MultipartUploadId' \
+  | tr '\t' '\n' \
   | xargs -t -I {} aws glacier abort-multipart-upload --upload-id={} "${abort_args[@]}"
 
 echo ""

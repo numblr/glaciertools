@@ -13,10 +13,9 @@ The script orchestrates the multipart upload of a large file to AWS Glacier.
 
 **Prerequisites**
 
-This script depends on **jq**, **openssl** and **parallel**. If you are
+This script depends on **openssl** and **parallel**. If you are
 on Mac OS X and using Homebrew, then run the following:
 
-    brew install jq
     brew install parallel
     brew install openssl
 
