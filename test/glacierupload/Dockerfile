@@ -1,19 +1,11 @@
-FROM ubuntu:latest
+FROM alpine:latest
 
-RUN apt-get update && \
-    apt-get upgrade -y && \
-    apt-get install -y tzdata locales
-
-RUN apt-get install -y \
-    less \
-    man \
-    ssh \
+RUN apk -v --update add \
     python \
-    python-pip \
-    python-virtualenv \
-    vim \
-    vim-nox \
-    zip \
+    py-pip \
+    groff \
+    less \
+    mailcap \
     parallel \
     openssl
 
