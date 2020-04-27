@@ -175,7 +175,7 @@ function multipart_upload {
   export profile description archive vault
 
   parallel --no-notice --halt now,fail=1 --line-buffer -j $JOBS ::: \
-    'parallel -a $archive --no-notice --pipepart --block $part_size --recend "" -j $JOBS --line-buffer --halt now,fail=1 --retries $RETRIES "upload_part {#}"' \
+    'parallel -a "$archive" --no-notice --pipepart --block $part_size --recend "" -j $JOBS --line-buffer --halt now,fail=1 --retries $RETRIES "upload_part {#}"' \
     '"$SCRIPT"/treehash "$archive" > treehash.sha'
 
   failure=$?
