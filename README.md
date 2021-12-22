@@ -49,7 +49,7 @@ You can verify that your connection works by describing the vault you have creat
     -d --description  optinal description of the file
     -s --split-size   level that determines the size of the parts used for
                       uploading the file. The level can be a number between
-                      0 and 22 and results in part size of (2^level) MBytes.
+                      0 and 12 and results in part size of (2^level) MBytes.
                       If not specified the default is 0, i.e. the file is
                       uploaded in 1MByte parts.
     -h --help         print help message
