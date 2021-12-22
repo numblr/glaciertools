@@ -32,9 +32,9 @@ function print_usage {
   echo "    --description  optional description of the file"
   echo "    --split-size   level that determines the size of the parts used for"
   echo "                   uploading the file. The level can be a number between"
-  echo "                   0 and 22 and results in part size of (2^level) MBytes."
+  echo "                   0 and 12 and results in part size of (2^level) MBytes."
   echo "                   If not specified the default is 0, i.e. the file is"
-  echo "                   uploaded in 1MByte parts."
+  echo "                   uploaded in 1MByte parts. Maximum is 4GiB"
   echo "    --help         print this message"
 }
 
@@ -119,7 +119,7 @@ function byte_range {
 function multipart_upload {
   local -r archive="$(cd "$(dirname "$1")"; pwd)/$(basename "$1")"
 
-  # Only powers of 2 are allowed, max is 2**22
+  # Only powers of 2 are allowed, max is 2**12
   local -r part_size=$(( 2**split_size * MB ))
   local -r file_size=$(wc -c < "$archive")
 
